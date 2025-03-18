@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/dassongh/rss-aggregator/internal/database"
+	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 )
 
@@ -49,4 +50,28 @@ func (apiCfg *apiConfig) handlerGetFeeds(w http.ResponseWriter, r *http.Request)
 	}
 
 	respondWithJSON(w, 200, databaseFeedsToFeeds(feeds))
+}
+
+func (apiCfg *apiConfig) handlerDeleteFeed(w http.ResponseWriter, r *http.Request, user database.User) {
+	feedIDStr := chi.URLParam(r, "feedID")
+	feedID, err := uuid.Parse(feedIDStr)
+	if err != nil {
+		respondWithError(w, 400, fmt.Sprintf("Couldn't parse feed ID: %v", err))
+		return
+	}
+
+	err = apiCfg.DB.DeleteFeed(r.Context(), database.DeleteFeedParams{
+		ID:     feedID,
+		UserID: user.ID,
+	})
+	if err != nil {
+		respondWithError(w, 400, fmt.Sprintf("Couldn't delete feed: %v", err))
+		return
+	}
+
+	respondWithJSON(w, 200, struct {
+		Message string `json:"message"`
+	}{
+		Message: "Feed deleted",
+	})
 }
